@@ -83,7 +83,8 @@ class Services_Hoptoad
 	public function installNotifierHandlers()
 	{
 		set_error_handler(array($this, "errorHandler"));
-		set_exception_handler(array($this, "exceptionHandler"));		
+    set_exception_handler(array($this, "exceptionHandler"));		
+    register_shutdown_function(array($this, "shutdownHandler"));
 	}
 
 	/**
@@ -130,7 +131,7 @@ class Services_Hoptoad
 	 */
 	public function errorHandler($code, $message, $file, $line)
 	{
-		if ($code == E_STRICT && $this->reportESTRICT === false) return;
+		if ($code == E_STRICT && $this->reportESTRICT === false || $code == E_NOTICE) return;
 
 		$this->notify($code, $message, $file, $line, debug_backtrace());
 	}
@@ -145,7 +146,17 @@ class Services_Hoptoad
 	public function exceptionHandler($exception)
 	{
 		$this->notify(get_class($exception), $exception->getMessage(), $exception->getFile(), $exception->getLine(), $exception->getTrace());
-	}
+  }
+
+  public function shutdownHandler()
+  {
+    //if ($code == E_STRICT && $this->reportESTRICT === false || $code == E_NOTICE) return;
+    $error = error_get_last();
+    if ($error['type'] == 1) {
+      $this->notify(E_ERROR, $error['message'], $error['file'], $error['line'], array('message' => "Fatal Error!  OH NOES!!!!!"));
+    }
+  }
+
 
 	/**
 	 * Set the values to be used for the next notice sent to Hoptoad
